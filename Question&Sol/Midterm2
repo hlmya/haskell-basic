@@ -1,0 +1,273 @@
+General Information
+Recommended for use: the GHC documentation, Hoogle (Haskell API search) and list of common functions. Please note that there are tasks that may depend on others, so it is recommended to define the functions in the order of their introduction in the text below. Each function must have exactly the same name and type as it is given, otherwise the solution will not be accepted. Place all the function definitions in a single source file and submit the contents here, in BE-AD. In addition to that, it is highly recommended to use the same source file for the development.
+
+Overview
+The "Luhn mod N" algorithm is the generalization of the Luhn algorithm that is a simple method for calculating checkums. In this algorithm, the input is a character sequence whose elements are used to determine an extra character which is then added to the end. This version of the character sequence could be verified by the inverse of the original method: take the first (n - 1)(n−1) elements of the sequence, calculate the checksum and check if it is equal to the last character.
+
+The more popular variation of the Luhn algorithm works with decimal digits that is often employed for credit cards or social security numbers in practice. In this exercise, we shall implement a more generic version that is able to work with sequences of arbitrary characters and calculate a checksum value for them. For encoding characters, a dictionary as a list of key-value pairs is introduced.
+
+type Entry      = (Char, Int)
+type Dictionary = [Entry]
+With the help of the type keyword, (Char, Int) will be called Entry, and the list of them will be called Dictionary (which is going to be the type for the dictionary) for the enhanced readibility in the types.
+
+If you want to use the tests embedded into the description, add the following code snippet to the beginning of your source file:
+
+import Control.DeepSeq
+import Control.Exception
+import System.IO.Unsafe
+import Data.Char
+import Data.Either
+import Data.Function
+import Data.List
+
+raises :: NFData a => a -> String -> Bool
+x `raises` s = unsafePerformIO $
+  either ((s ~=) . f) (const False) `fmap` (try $ evaluate $ force x)
+  where
+    f :: SomeException -> String
+    f = show
+
+    (~=) = isPrefixOf `on` (map toUpper . unwords . words)
+
+allTests = (and (concatMap snd tests), tests)
+
+tests =
+  [ ("test_buildDictionary", test_buildDictionary)
+  , ("test_findCode", test_findCode)
+  , ("test_findChar", test_findChar)
+  , ("test_translate", test_translate)
+  , ("test_doubleEverySnd", test_doubleEverySnd)
+  , ("test_convertToBase", test_convertToBase)
+  , ("test_summarize", test_summarize)
+  , ("test_getCheckCode", test_getCheckCode)
+  , ("test_getCheckChar", test_getCheckChar)
+  , ("test_generate", test_generate)
+  , ("test_validate", test_validate)
+  ]
+Building Dictionaries (1 point)
+Define a function that builds a dictionary for a set of characters.
+
+Type:
+
+buildDictionary :: [Char] -> Dictionary
+Test cases:
+
+test_buildDictionary = [
+   buildDictionary "abcdef" == [('a', 0), ('b', 1), ('c', 2), ('d', 3), ('e', 4), ('f', 5)]
+ , buildDictionary (['0'..'9'] ++ ['a'..'z']) ==
+    [('0', 0), ('1', 1), ('2', 2), ('3', 3), ('4', 4), ('5', 5)
+    ,('6', 6), ('7', 7), ('8', 8), ('9', 9), ('a', 10), ('b', 11)
+    ,('c', 12), ('d', 13), ('e', 14), ('f', 15), ('g', 16), ('h', 17)
+    ,('i', 18), ('j', 19), ('k', 20), ('l', 21), ('m', 22), ('n', 23)
+    ,('o', 24), ('p', 25), ('q', 26), ('r', 27), ('s', 28), ('t', 29)
+    ,('u', 30), ('v', 31), ('w', 32), ('x', 33), ('y', 34), ('z', 35)
+    ]
+ , buildDictionary ['a'..'z'] ==
+    [('a', 0), ('b', 1), ('c', 2), ('d', 3), ('e', 4), ('f', 5)
+    ,('g', 6), ('h', 7), ('i', 8), ('j', 9), ('k', 10), ('l', 11)
+    ,('m', 12), ('n', 13), ('o', 14), ('p', 15), ('q', 16), ('r', 17)
+    ,('s', 18), ('t', 19), ('u', 20), ('v', 21), ('w', 22), ('x', 23)
+    ,('y', 24), ('z', 25)
+    ]
+  ]
+In the following, we are going to use many predefined dictionaries in the test cases, which are now defined here with this function:
+
+dictionary1 = buildDictionary "abcdef"
+dictionary2 = buildDictionary ['a'..'z']
+dictionary3 = buildDictionary (['0'..'9'] ++ ['a'..'z'])
+Validating Characters (2 points)
+Define a predicate function that checks if a character is in the given dictionary.
+
+Type:
+
+isValidCharacter :: Dictionary -> Char -> Bool
+Test cases:
+
+tests_isValidCharacter = [
+   isValidCharacter dictionary1 'a'
+ , not $ isValidCharacter dictionary1 't'
+ , not $ isValidCharacter dictionary1 '3'
+ , isValidCharacter dictionary2 't'
+ , isValidCharacter dictionary3 '4'
+ ]
+Validating Character Sequences (2 points)
+Define a predicate function that checks if every character in a text is in the given dictionary.
+
+Type:
+
+isValidCharSequence :: Dictionary -> String -> Bool
+Test cases:
+
+tests_isValidCharSequence = [
+   isValidCharSequence dictionary1 "abc"
+ , not $ isValidCharSequence dictionary1 "foobar"
+ , isValidCharSequence dictionary2 "foobar"
+ , isValidCharSequence dictionary3 "zulu110"
+ ]
+Finding Codes in a Dictionary (3 points)
+Define a function that finds the corresponding code for the given character. If the character is not present in the dictionary, use the error function for signalling an error (see the test cases).
+
+Type:
+
+findCode :: Char -> Dictionary -> Int
+Test cases:
+
+test_findCode = [
+   findCode 'a' dictionary1 == 0
+ , findCode 'f' dictionary1 == 5
+ , findCode 'f' dictionary2 == 5
+ , findCode 'f' dictionary3 == 15
+ , findCode '4' dictionary1 `raises` "findCode: Illegal character '4'"
+ , findCode ' ' dictionary1 `raises` "findCode: Illegal character ' '"
+ ]
+Finding Characters in a Dictionary (3 points)
+Define a function that finds the corresponding character for the given integer. If no such character could be found, use the error function for signalling an error (see the test cases).
+
+Type:
+
+findChar :: Int -> Dictionary -> Char
+Test cases:
+
+test_findChar = [
+   findChar 0  dictionary1 == 'a'
+ , findChar 8  dictionary2 == 'i'
+ , findChar 0  dictionary3 == '0'
+ , findChar 30 dictionary1 `raises`  "findChar: Illegal code 30"
+ , findChar 30 dictionary2 `raises` "findChar: Illegal code 30"
+ ]
+Translating Texts (2 points)
+Define a function that translates every character in a text to the list of the corresponding codes according to a dictionary.
+
+Remark. It may be assumed that every character could be found in the dictionary.
+
+Type:
+
+translate :: Dictionary -> String -> [Int]
+Test cases:
+
+test_translate = [
+   translate dictionary1 "abcdef" == [0, 1, 2, 3, 4, 5]
+ , translate dictionary3 "abcdef" == [10, 11, 12, 13, 14, 15]
+ , translate dictionary3 "ball007" == [11,10,21,21,0,0,7]
+ ]
+Mapping an Integer Sequence (4 points)
+Define a function that doubles every second element in a list of integers from the right to the left (so it starts from the end).
+
+Type:
+
+doubleEverySnd :: [Int] -> [Int]
+Test cases:
+
+test_doubleEverySnd = [
+   doubleEverySnd [] == []
+ , doubleEverySnd [1] == [2]
+ , doubleEverySnd [1..10] == [1, 4, 3, 8, 5, 12, 7, 16, 9, 20]
+ , doubleEverySnd [1..11] == [2, 2, 6, 4, 10, 6, 14, 8, 18, 10, 22]
+ , doubleEverySnd [1..42] ==
+     [1, 4, 3, 8, 5, 12, 7, 16, 9, 20, 11, 24, 13, 28, 15, 32, 17, 36
+   ,19, 40, 21, 44, 23, 48, 25, 52, 27, 56, 29, 60, 31, 64, 33, 68, 35
+   ,72, 37, 76, 39, 80, 41, 84
+   ]
+ ]
+For the convenience, introduce another type synonym that represents the base for a numeral system.
+
+type Base = Int
+Converting Decimals (5 points)
+Define a function that converts a decimal number to a number of a given base as a list of integers. In the resulting list, the elements shall be in a reversed order.
+
+Remark. The base must be greater than one and the input number must not be negative.
+
+Type:
+
+convertToBase :: Int -> Base -> [Int]
+Test cases:
+
+test_convertToBase = [
+   convertToBase 0 6 == [0]
+ , convertToBase 5 6 == [5]
+ , convertToBase 10 6 == [4, 1]
+ , convertToBase 20 5 == [0, 4]
+ , convertToBase 10 (-10) `raises` "convertToBase: Invalid base -10"
+ , convertToBase (-10) 3  `raises` "convertToBase: Invalid number -10"
+ ]
+Summing Up a List of Integers (3 points)
+Define a function that has the following parts:
+
+First, it doubles every second element from the right to the left (starting from the end).
+
+It converts every element in the list to a given base and sums their values up.
+
+Type:
+
+summarize ::  Base -> [Int] -> Int
+Test cases:
+
+test_summarize = [
+   summarize 6 [1..10] == 35
+ , summarize 5 [1..10] == 33
+ , summarize 6 (translate dictionary3 "foobar") == 28
+ ]
+Calculating Checksums (3 points)
+Define a function calculates the checksum for a given sequence. It shall work as follows:
+
+Sum up all the elements in the list with the previously defined function.
+
+The checksum is the number that shall be added to the previously calculated sum in order to get a multiply of the base. That is, for example, if the base is 66 and the sum is 1414, then the checksum shall be 44, because (14 + 4) (3 * 6).
+
+Type:
+
+getCheckCode :: Base -> [Int] -> Int
+test_getCheckCode = [
+   getCheckCode 2 [0,4,5,2,1,7] == 0
+ , getCheckCode 6 [0,4,5,2,1,7] == 1
+ , getCheckCode 10 [0,4,5,2,1,7] == 7
+ , getCheckCode 15 [0,4,5,2,1,7,7,9,8] == 10
+ ]
+Finding a Character for the Checksum (2 points)
+Define a function that determines what character shall be appended to the text by a given sequence of integers and a dictionary.
+
+Remark. Use the previously defined function. Note that the base could be derived from the length of the dictionary.
+
+Type:
+
+getCheckChar :: Dictionary -> [Int] -> Char
+Test cases:
+
+test_getCheckChar = [
+   getCheckChar dictionary1 [1,2,3,4,5,0,1,2] == 'd'
+ , getCheckChar dictionary3 [1,2,3,4,5,0,1,2] == 'a'
+ ]
+Adding the Checksum (2 points)
+With the help of the previously defined functions, define a function that appends the checksum to the text by the dictionary but only if every character in the text is considered valid. If the text contains non-valid characters then use the error for signalling and error (see the test cases).
+
+Type:
+
+generate :: Dictionary -> String -> String
+Test cases:
+
+test_generate = [
+   generate dictionary3 "foobar" == "foobar5"
+ , generate dictionary3 "20141205" == "20141205a"
+ , generate dictionary2 "foobar" == "foobart"
+ , generate dictionary1 "foobar" `raises` "generate: Illegal sequence \"foobar\""
+ , generate dictionary2 "20141205" `raises` "generate: Illegal sequence \"20141205\""
+ ]
+Validating the Text (2 points)
+Define a function that verifies if a text extended with a checksum is valid or not. If the text has non-valid characters, use the error function for signalling an error message (see the test cases).
+
+Type:
+
+validate :: Dictionary -> String -> Bool
+Test cases:
+
+test_validate = [
+   validate dictionary2 (generate dictionary2 "foobar")
+ , validate dictionary3 (generate dictionary3 "20141205")
+ , validate dictionary1 "foobar" `raises` "validate: Illegal elements in sequence \"foobar\""
+ ]
+Grading
+1: 0 -- 17 points
+2: 18 -- 21 points
+3: 22 -- 25 points
+4: 26 -- 29 points
+5: 30 -- 34 points

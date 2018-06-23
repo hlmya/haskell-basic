@@ -1,0 +1,160 @@
+Task description
+We will implement a priority queue data structure and the appropriate functions for performing operations on it.
+
+A simple queue data structure stores a list of elements in the order in which they were inserted. Elements are removed in the same order the are inserted, first-in-first-out order, similar to the queue (line) at a store. A priority queue differs from a simple queue in that each element has an assigned priority, such that elements with the highest priority are removed first. Elements having the same order are removed in the order they were inserted. You can read more about priority queues https://en.wikipedia.org/wiki/Priority_queue.
+
+The priority of an element is given by an integer:
+
+type Priority = Int
+Furthermore, a single entry in a priority queue, containing an element and its assigned value, can be described like this:
+
+data Entry a = Entry Priority a
+  deriving (Eq, Show)
+Finally, the queue as a whole is represented by the PQueue type
+
+data PQueue a = PQueue [Entry a]
+  deriving (Eq, Show)
+If you want to use the tests embedded into the description, add the following code snippet to the beginning of your source file:
+
+{-
+
+allTests = (and (concatMap snd tests), tests)
+
+tests =
+  [ ("test_mkEntry", test_mkEntry)
+  , ("test_value", test_value)
+  , ("test_priority", test_priority)
+  , ("test_push", test_push)
+  , ("test_fromList", test_fromList)
+  , ("test_top", test_top)
+  , ("test_remove", test_remove)
+  , ("test_pop", test_pop)
+  , ("test_show", test_show)
+  ]
+
+-}
+Create entry
+Define a function that creates an entry that can be inserted into a priority queue. Each entry contains an element and its priority.
+
+(@@) :: a -> Priority -> Entry a
+Test cases:
+
+test_mkEntry = [
+   "verd" @@ 2 == Entry 2 "verd"
+ , "rouge" @@ 8 == Entry 8 "rouge"
+ , "blanc" @@ 3 == Entry 3 "blanc"
+ ]
+Get element value
+Define a function that, given a priority queue entry, returns the value of the entry's element.
+
+value :: Entry a -> a
+Test cases:
+
+test_value = [
+   value ("ten" @@ 10) == "ten"
+ , value ('a' @@ 1)    == 'a'
+ ]
+Get element priority
+Define a function that, givne a priority queue entry, returns the entry's priority.
+
+priority :: Entry a -> Priority
+Test cases:
+
+test_priority = [
+   priority ("ten" @@ 10) == 10
+ , priority ('a' @@ 1)    == 1
+ ]
+Empty queue
+Define a function that constructs an empty queue.
+
+empty :: PQueue a
+Element insertion
+Define a function which insert a new element in a priority queue. The function returns an updated priority queue. The function must enforce the following invariants:
+
+The priority queue must remain sorted by priority in a descending order after insertion.
+If there is already an entry in the queue with the same priority as the inserted value, the old entries must come first.
+Here is a function you can use when writing push
+
+span :: (a -> Bool) -> [a] -> ([a], [a])
+Algorithm:
+
+Break the list inside the PQueue into two parts: elements with higher or equal priority and elements with lower priority.
+
+Insert the new element between these two parts and concatenate the parts.
+
+push :: Entry a -> PQueue a -> PQueue a
+Test cases:
+
+test_push = [
+   push ("ten" @@ 10) empty == PQueue [Entry 10 "ten"]
+ , push ("one" @@ 1) (push ("ten" @@ 10) empty) == PQueue [Entry 10 "ten", Entry 1 "one"]
+ , push ("yet another two" @@ 2) (push ("two" @@ 2) (push ("one" @@ 1) empty)) == PQueue [Entry 2 "two", Entry 2 "yet another two", Entry 1 "one"]
+ ]
+Test your code thoroughly to ensure that it maintains the invariants!
+
+Convert to a priority queue
+Define a function that creates a priority queue from a list of tuples. Each tuple contains a priority and an element.
+
+This function should insert each list element from left to right into a new priority queue.
+
+fromList :: [(Priority, a)] -> PQueue a
+Test cases:
+
+test_fromList = [
+   fromList ([] :: [(Priority, String)]) == PQueue []
+ , fromList [(1,"one"), (5, "five"), (4, "four")] == PQueue [Entry 5 "five", Entry 4 "four", Entry 1 "one"]
+ , fromList [(5, "first five"), (1,"one"),  (5, "second five"), (4, "four"), (5, "third five")] == PQueue [Entry 5 "first five", Entry 5 "second five", Entry 5 "third five", Entry 4 "four", Entry 1 "one"]
+ ]
+A constant for testing
+We define the following constant for testing our priority queue:
+
+priq :: PQueue String
+priq = fromList [(10, "ten"), (9, "nine"), (8, "eight"), (2, "two")]
+Get next element
+Define a function which gets the next element from a priority queue. The queue itself remains unchanged. For the case of empty queue, we return a Maybe value.
+
+top :: PQueue a -> Maybe (Entry a)
+Test cases:
+
+test_top = [
+   top priq == Just (Entry 10 "ten")
+ , top (empty :: PQueue Int) == Nothing
+ ]
+Removal of next element
+Define a function that removes the next element from the queue. The function should work even if the queue is empty. In this case, it should return an empty queue.
+
+remove :: PQueue a -> PQueue a
+Test cases:
+
+test_remove = [
+   remove priq == PQueue [Entry 9 "nine", Entry 8 "eight", Entry 2 "two"]
+ , remove (empty :: PQueue Int) == empty
+ ]
+Removal and getting at once
+Define a function that removes and returns the next element in the queue.
+
+pop :: PQueue a -> (Maybe (Entry a), PQueue a)
+Test cases:
+
+test_pop = [
+   pop priq == (Just (Entry 10 "ten"), PQueue [Entry 9 "nine", Entry 8 "eight", Entry 2 "two"])
+ , pop (empty :: PQueue Int) == (Nothing, empty)
+ ]
+Show instance
+Instead of the built-in deriving Show mechanism, which defines a simple show function, define a custom show function for Entry.
+
+It should return a string similar to 10 -> "ten" for Entry 10 "ten".
+
+Because we apply show to the value inside an Entry, we require that the value supports show. That is, the instance definition should start like following:
+
+instance Show a => Show (Entry a) where
+Note that show of PQueue also changes.
+
+Test cases:
+
+test_show = [
+    show ('t' @@ 10) == "10 -> 't'"
+  , show ("a" @@ 5)  == "5 -> \"a\""
+  , show (True @@ 1) == "1 -> True"
+  , show (fromList [(1, True), (2, False)]) == "PQueue [2 -> False,1 -> True]"
+  ]

@@ -1,0 +1,231 @@
+Overview
+We will implement compression for strings using run-length encoding: a string will be replaced by another string where runs of repeated characters are replaced by a single character and the number which says how many times it appeared. For example, the string aaaaabbbbcc will be compressed to a5b4c2. This compression only works well for strings which have many runs.
+
+Runs of more than 9 characters will be replaced by multiple character-number pairs. For example, dddddddddddd will be compressed to d9d3.
+
+This exercise was taken from Graham Hutton.
+
+Equal characters at the beginning of a string (3 points)
+Define a function equals which selects a run of repeated characters from the beginning of a string, the run should be as long as possible. Hint: use the function takeWhile.
+
+equals :: String -> String
+equals = undefined
+Test cases:
+
+test_equals =
+  [ equals "aaaaabbbbcc" == "aaaaa"
+  , equals "ddddddddddddddd" == "ddddddddddddddd"
+  , equals "aa" == "aa"
+  , equals "abc" == "a"
+  , equals "" == ""
+  ]
+A run (1 point)
+Using equals, define a function run which selects a run of length at most 9 from the beginning of the string.
+
+run :: String -> String
+run = undefined
+Test cases:
+
+test_run =
+  [ run "aaaaabbbbcc" == "aaaaa"
+  , run "ddddddddddddddd" == "ddddddddd"
+  , run "aa" == "aa"
+  , run "abc" == "a"
+  , run "" == ""
+  ]
+All runs
+The runs function splits the string into a list of runs. We use run in its definition. We defined this function for you.
+
+runs :: String -> [String]
+runs [] = []
+runs s = r : runs (drop (length r) s)
+  where
+    r = run s
+Test cases:
+
+test_runs =
+  [ runs "aaaaabbbbcc" == ["aaaaa", "bbbb", "cc"]
+  , runs "ddddddddddddddd" == ["ddddddddd", "dddddd"]
+  , runs "aa" == ["aa"]
+  , runs "abc" == ["a", "b", "c"]
+  , runs "" == []
+  ]
+Encoding (3 points)
+Using runs, define the function encode which takes a string and returns all the runs encoded by its character and the length of the run (which is at most 9). Hint: use map or list comprehension.
+
+encode :: String -> [(Char,Int)]
+encode = undefined
+Test cases:
+
+test_encode =
+  [ encode "aaaaabbbbcc" == [('a', 5), ('b', 4), ('c', 2)]
+  , encode "ddddddddddddddd" == [('d', 9), ('d', 6)]
+  , encode "aa" == [('a', 2)]
+  , encode "abc" == [('a', 1), ('b', 1), ('c', 1)]
+  , encode "" == []
+  ]
+Compression (4 points)
+Using encode, define compression: it takes a string and returns the run-length compressed version as described above. Hints: use concat. To turn a number to a string, you can use the show function.
+
+compress :: String -> String
+compress = undefined
+Test cases:
+
+test_compress =
+  [ compress "aaaaabbbbcc" == "a5b4c2"
+  , compress "ddddddddddddddd" == "d9d6"
+  , compress "aa" == "a2"
+  , compress "abc" == "a1b1c1"
+  , compress "" == ""
+  ]
+Decoding (4 points)
+Define the inverse of encode. It takes a list of runs given by character-number pairs and turns it into a string.
+
+Hint: use replicate and concat.
+
+decode :: [(Char,Int)] -> String
+decode = undefined
+Test cases:
+
+test_decode =
+  [ decode [('a', 5), ('b', 4), ('c', 2)] == "aaaaabbbbcc"
+  , decode [('d', 9), ('d', 6)] == "ddddddddddddddd"
+  , decode [('a', 2)] == "aa"
+  , decode [('a', 1), ('b', 1), ('c', 1)] == "abc"
+  , decode [] == ""
+  ]
+Unruns
+We defined the function unruns for you which turns a compressed string into character-number pairs.
+
+unruns :: String -> [(Char, Int)]
+unruns [] = []
+unruns (c:i:xs) = (c, read (i:[])) : unruns xs
+
+test_unruns = 
+  [ unruns "a5b4c2" == [('a', 5), ('b', 4), ('c', 2)]
+  , unruns "d9d6" == [('d', 9), ('d', 6)]
+  , unruns "a2" == [('a', 2)]
+  , unruns "a1b1c1" == [('a', 1), ('b', 1), ('c', 1)]
+  , unruns "" == []
+  ]
+Decompress (1 point)
+Define the inverse of compress: decompression.
+
+decompress :: String -> String
+decompress = undefined
+Test cases:
+
+test_decompress =
+  [ decompress "a5b4c2" == "aaaaabbbbcc"
+  , decompress "d9d6" == "ddddddddddddddd"
+  , decompress "a2" == "aa"
+  , decompress "a1b1c1" == "abc"
+  , decompress "" == ""
+  ]
+Starting file
+You can use the following file to start your program.
+
+equals :: String -> String
+equals = undefined
+          
+test_equals =
+  [ equals "aaaaabbbbcc" == "aaaaa"
+  , equals "ddddddddddddddd" == "ddddddddddddddd"
+  , equals "aa" == "aa"
+  , equals "abc" == "a"
+  , equals "" == ""
+  ]
+
+run :: String -> String
+run = undefined
+
+test_run =
+  [ run "aaaaabbbbcc" == "aaaaa"
+  , run "ddddddddddddddd" == "ddddddddd"
+  , run "aa" == "aa"
+  , run "abc" == "a"
+  , run "" == ""
+  ]
+
+runs :: String -> [String]
+runs [] = []
+runs s = r : runs (drop (length r) s)
+  where
+    r = run s
+
+test_runs =
+  [ runs "aaaaabbbbcc" == ["aaaaa", "bbbb", "cc"]
+  , runs "ddddddddddddddd" == ["ddddddddd", "dddddd"]
+  , runs "aa" == ["aa"]
+  , runs "abc" == ["a", "b", "c"]
+  , runs "" == []
+  ]
+
+encode :: String -> [(Char,Int)]
+encode = undefined
+
+test_encode =
+  [ encode "aaaaabbbbcc" == [('a', 5), ('b', 4), ('c', 2)]
+  , encode "ddddddddddddddd" == [('d', 9), ('d', 6)]
+  , encode "aa" == [('a', 2)]
+  , encode "abc" == [('a', 1), ('b', 1), ('c', 1)]
+  , encode "" == []
+  ]
+
+compress :: String -> String
+compress = undefined
+
+test_compress =
+  [ compress "aaaaabbbbcc" == "a5b4c2"
+  , compress "ddddddddddddddd" == "d9d6"
+  , compress "aa" == "a2"
+  , compress "abc" == "a1b1c1"
+  , compress "" == ""
+  ]
+
+decode :: [(Char,Int)] -> String
+decode = undefined
+
+test_decode =
+  [ decode [('a', 5), ('b', 4), ('c', 2)] == "aaaaabbbbcc"
+  , decode [('d', 9), ('d', 6)] == "ddddddddddddddd"
+  , decode [('a', 2)] == "aa"
+  , decode [('a', 1), ('b', 1), ('c', 1)] == "abc"
+  , decode [] == ""
+  ]
+
+unruns :: String -> [(Char, Int)]
+unruns [] = []
+unruns (c:i:xs) = (c, read (i:[])) : unruns xs
+
+test_unruns = 
+  [ unruns "a5b4c2" == [('a', 5), ('b', 4), ('c', 2)]
+  , unruns "d9d6" == [('d', 9), ('d', 6)]
+  , unruns "a2" == [('a', 2)]
+  , unruns "a1b1c1" == [('a', 1), ('b', 1), ('c', 1)]
+  , unruns "" == []
+  ]
+
+decompress :: String -> String
+decompress = undefined
+
+test_decompress =
+  [ decompress "a5b4c2" == "aaaaabbbbcc"
+  , decompress "d9d6" == "ddddddddddddddd"
+  , decompress "a2" == "aa"
+  , decompress "a1b1c1" == "abc"
+  , decompress "" == ""
+  ]
+
+allTests = (and bs, bs)
+  where
+    bs = map and
+      [ test_equals
+      , test_run
+      , test_runs
+      , test_encode
+      , test_compress
+      , test_decode
+      , test_unruns
+      , test_decompress
+      ]

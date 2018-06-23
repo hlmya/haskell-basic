@@ -1,0 +1,310 @@
+In this exam you will define parts of a snake game. A snake consists of a list of (x, y) coordinates where it is situated, a direction in which it is going and a maximal length of the snake. You will implement how the snake goes ahead in its direction how it turns (changes direction).
+
+If you have any questions, ask the teachers.
+
+At the end of the exercise there is a starting code that you can copy and paste into an empty file. Then, the task of this exam is to replace all the lines which have undefined with real definitions. There is automatic testing for the solutions when you upload them.
+
+A position is a pair of (x, y) coordinates.
+
+type Position = (Int, Int)
+A direction of a snake is a function where the input is a Position and the output is also a Position.
+
+type Dir = Position -> Position
+A snake is defined as a triple: a direction, a list of positions (the head of the list is the head of the snake) and an integer which is the maximal length of the snake.
+
+type Snake = (Dir, [Position], Int)
+Directions (3 points)
+You have to define the four possible directions in which the snake can go. The west direction was defined for you as an example: because the snake goes West, the x coordinate is decreased by 1. Each direction is given as one step of the snake in the corresponding direction.
+
+west, east, north, south :: Dir
+west  (x,y) = (x-1,y)
+east  = undefined
+north = undefined
+south = undefined
+After you have given the definitions of east, north and south, the list testDirs should only have True elements. This tests whether your definition is good.
+
+testDirs :: [Bool]
+testDirs = [ south (0,0) == (0,-1)
+           , east  (3,3) == (4,3)
+           , north (3,2) == (3,3)
+           , west  (2,2) == (1,2)
+           , east (west (0,0)) == (0,0)
+           , north (west (0,0)) == (-1,1)
+           ]
+Checking directions (3 points)
+Given a direction d, isWest d returns True if d is the West direction. To check this, you should apply d to (0,0) and check what the result is. If the first component of the result is -1 and the second component is 0, you know that the direction was West.
+
+Similarly for the other directions.
+
+We have given the first one for you as an example.
+
+isWest, isEast, isNorth, isSouth :: Dir -> Bool
+isWest  d = fst (d (0,0)) == (-1) && snd (d (0,0)) == 0
+isEast  = undefined
+isNorth = undefined
+isSouth = undefined
+We also have tests for these.
+
+testIsDirs :: [Bool]
+testIsDirs = [ isWest  west
+             , isEast  east
+             , isNorth north
+             , isSouth south
+             , not (isWest south)
+             , not (isNorth west)
+             , not (isEast west)
+             , not (isSouth east)
+             , not (isSouth west)
+             , not (isSouth north)
+             ]
+Equality of directions (3 points)
+You can test if two directions are equal. You can do this by applying both of them to the same position and check if the results are equal (using (==)).
+
+eqDir :: Dir -> Dir -> Bool
+eqDir = undefined
+Tests for equality of directions:
+
+testEqDir :: [Bool]
+testEqDir = [ west  `eqDir` west
+            , east  `eqDir` east
+            , north `eqDir` north
+            , south `eqDir` south
+            , not (west  `eqDir` east)
+            , not (west  `eqDir` north)
+            , not (west  `eqDir` south)
+            , not (east  `eqDir` west)
+            , not (east  `eqDir` north)
+            , not (east  `eqDir` south)
+            , not (north `eqDir` west)
+            , not (north `eqDir` east)
+            , not (north `eqDir` south)
+            , not (south `eqDir` east)
+            , not (south `eqDir` west)
+            , not (south `eqDir` north)
+            ]             
+Turning right (3 points)
+Given a direction d, turnRight d should be another direction which you get after turning right: North from West, South from East, East from North, West from South.
+
+turnRight :: Dir -> Dir
+turnRight = undefined
+Tests:
+
+testTurnRight :: [Bool]
+testTurnRight = [ turnRight west  `eqDir` north
+                , turnRight east  `eqDir` south
+                , turnRight north `eqDir` east
+                , turnRight south `eqDir` west
+                ]
+Opposite direction (3 points)
+oppositeDir checks if two directions are opposite to each other. The opposite of East is West, the opposite of West is East. The opposite of North is South, the opposite of South is North.
+
+oppositeDir :: Dir -> Dir -> Bool
+oppositeDir = undefined
+Tests:
+
+testOppositeDir :: [Bool]
+testOppositeDir = [ oppositeDir west east
+                  , oppositeDir east west
+                  , oppositeDir north south
+                  , oppositeDir south north
+                  , not (oppositeDir south west)
+                  , not (oppositeDir south east)
+                  , not (oppositeDir south south)
+                  , not (oppositeDir east north)
+                  , not (oppositeDir east east)
+                  ]
+Turning a snake to a direction (4 points)
+Given a direction d and a snake s, turnTo d s should be s if the direction is opposite to the snake's current direction (for example, the snake cannot turn from East to West immediately). Otherwise, the snake should be turned into the direction d.
+
+turnTo :: Dir -> Snake -> Snake
+turnTo = undefined
+The tests are given after a few helper definitions.
+
+aSnake :: Snake
+aSnake = (east, [(0,0)], 4)
+
+snakeBody :: Snake -> [Position]
+snakeBody (d, ps, l) = ps
+
+snakeDir :: Snake -> Dir
+snakeDir (d, ps, l) = d
+                  
+snakeLength :: Snake -> Int
+snakeLength (d, ps, l) = l
+                  
+testTurnTo :: [Bool]
+testTurnTo = [ -- turnTo does not change the position of the snake
+               snakeBody (turnTo west aSnake) == snakeBody aSnake
+             , snakeBody (turnTo north aSnake) == snakeBody aSnake
+
+               -- turnTo does not change the length of the snake
+             , snakeLength (turnTo north aSnake) == snakeLength aSnake
+
+               -- turning to opposite direction is not allowed, it does not change the direction
+             , snakeDir (turnTo west aSnake) `eqDir` snakeDir aSnake
+
+               -- turning to north from east is allowed
+             , snakeDir (turnTo north aSnake) `eqDir` north
+             ]
+Stepping of the snake (5 points)
+step takes a snake (d, ps, l) and returns a snake which stepped in the direction d. The direction d and the length of the snake l should be unchanged. The new position of the head of the snake will be d applied to the head of ps.
+
+However you should check if the new position of the head of the snake is not inside ps (otherwise the snake would cross itself). If this is the case, the snake should be returned unchanged.
+
+If the new position of the head of the snake is not inside ps, you should add it to the head of ps and then truncate the snake so that its length is at most l.
+
+Look carefully at the test cases if the above is not clear enough (you can ask the teachers too, of course).
+
+step :: Snake -> Snake
+step = undefined
+Test cases:
+
+testStep :: [Bool]
+testStep = [ snakeBody (step aSnake) == [(1,0),(0,0)]
+           , snakeBody (step (step aSnake)) == [(2,0),(1,0),(0,0)]
+           , snakeBody (step (step (step (step (step aSnake))))) == [(5,0),(4,0),(3,0),(2,0)]
+           , snakeBody (step (step (step (step (step (step aSnake)))))) == [(6,0),(5,0),(4,0),(3,0)]
+           , snakeBody (step (turnTo north (step aSnake))) == [(1,1),(1,0),(0,0)]
+           , snakeDir (step aSnake) `eqDir` snakeDir aSnake
+           , length (snakeBody (step (step (step (step (step (step aSnake))))))) == snakeLength aSnake
+           , snakeLength aSnake == snakeLength (step (step aSnake))
+           ]
+Starting file
+type Position = (Int, Int)
+type Dir = Position -> Position
+type Snake = (Dir, [Position], Int)
+
+west, east, north, south :: Dir
+west  (x,y) = (x-1,y)
+east  = undefined
+north = undefined
+south = undefined
+
+testDirs :: [Bool]
+testDirs = [ south (0,0) == (0,-1)
+           , east  (3,3) == (4,3)
+           , north (3,2) == (3,3)
+           , west  (2,2) == (1,2)
+           , east (west (0,0)) == (0,0)
+           , north (west (0,0)) == (-1,1)
+           ]
+
+isWest, isEast, isNorth, isSouth :: Dir -> Bool
+isWest  d = fst (d (0,0)) == (-1) && snd (d (0,0)) == 0
+isEast  = undefined
+isNorth = undefined
+isSouth = undefined
+
+testIsDirs :: [Bool]
+testIsDirs = [ isWest  west
+             , isEast  east
+             , isNorth north
+             , isSouth south
+             , not (isWest south)
+             , not (isNorth west)
+             , not (isEast west)
+             , not (isSouth east)
+             , not (isSouth west)
+             , not (isSouth north)
+             ]
+
+eqDir :: Dir -> Dir -> Bool
+eqDir = undefined
+
+testEqDir :: [Bool]
+testEqDir = [ west  `eqDir` west
+            , east  `eqDir` east
+            , north `eqDir` north
+            , south `eqDir` south
+            , not (west  `eqDir` east)
+            , not (west  `eqDir` north)
+            , not (west  `eqDir` south)
+            , not (east  `eqDir` west)
+            , not (east  `eqDir` north)
+            , not (east  `eqDir` south)
+            , not (north `eqDir` west)
+            , not (north `eqDir` east)
+            , not (north `eqDir` south)
+            , not (south `eqDir` east)
+            , not (south `eqDir` west)
+            , not (south `eqDir` north)
+            ]
+
+turnRight :: Dir -> Dir
+turnRight = undefined
+
+testTurnRight :: [Bool]
+testTurnRight = [ turnRight west  `eqDir` north
+                , turnRight east  `eqDir` south
+                , turnRight north `eqDir` east
+                , turnRight south `eqDir` west
+                ]
+
+oppositeDir :: Dir -> Dir -> Bool
+oppositeDir = undefined
+
+testOppositeDir :: [Bool]
+testOppositeDir = [ oppositeDir west east
+                  , oppositeDir east west
+                  , oppositeDir north south
+                  , oppositeDir south north
+                  , not (oppositeDir south west)
+                  , not (oppositeDir south east)
+                  , not (oppositeDir south south)
+                  , not (oppositeDir east north)
+                  , not (oppositeDir east east)
+                  ]
+
+turnTo :: Dir -> Snake -> Snake
+turnTo = undefined
+
+aSnake :: Snake
+aSnake = (east, [(0,0)], 4)
+
+snakeBody :: Snake -> [Position]
+snakeBody (d, ps, l) = ps
+
+snakeDir :: Snake -> Dir
+snakeDir (d, ps, l) = d
+                  
+snakeLength :: Snake -> Int
+snakeLength (d, ps, l) = l
+                  
+testTurnTo :: [Bool]
+testTurnTo = [ -- turnTo does not change the position of the snake
+               snakeBody (turnTo west aSnake) == snakeBody aSnake
+             , snakeBody (turnTo north aSnake) == snakeBody aSnake
+
+               -- turning to opposite direction is not allowed, it does not change the direction
+             , snakeDir (turnTo west aSnake) `eqDir` snakeDir aSnake
+
+               -- turning to north from east is allowed
+             , snakeDir (turnTo north aSnake) `eqDir` north
+
+               -- turnTo does not change the length of the snake
+             , snakeLength (turnTo north aSnake) == snakeLength aSnake
+             ]
+
+step :: Snake -> Snake
+step = undefined
+
+testStep :: [Bool]
+testStep = [ snakeBody (step aSnake) == [(1,0),(0,0)]
+           , snakeBody (step (step aSnake)) == [(2,0),(1,0),(0,0)]
+           , snakeBody (step (step (step (step (step aSnake))))) == [(5,0),(4,0),(3,0),(2,0)]
+           , snakeBody (step (step (step (step (step (step aSnake)))))) == [(6,0),(5,0),(4,0),(3,0)]
+           , snakeBody (step (turnTo north (step aSnake))) == [(1,1),(1,0),(0,0)]
+           , snakeDir (step aSnake) `eqDir` snakeDir aSnake
+           , length (snakeBody (step (step (step (step (step (step aSnake))))))) == snakeLength aSnake
+           , snakeLength aSnake == snakeLength (step (step aSnake))
+           ]
+
+tests :: Bool
+tests = and (testDirs
+            ++ testIsDirs
+            ++ testEqDir
+            ++ testTurnRight
+            ++ testOppositeDir
+            ++ testTurnTo
+            ++ testStep
+            )

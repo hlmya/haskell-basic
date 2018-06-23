@@ -1,0 +1,272 @@
+Overview
+We will implement Hangman, a game where the goal is to figure out a hidden phrase by guessing letters in a certain limit.
+
+The rules are as follows:
+
+Initially only the length of phrase and spaces between words are visible. So, the phrase "hello world" becomes _ _ _ _ _ _ _ _ _ _
+
+The player may guess only one letter in every round.
+
+The guessed letters actually found in the phrase become visible.
+
+Missed guesses are noted.
+
+The game ends if one of the following holds:
+
+The player manages to figure out the phrase, that is, every letter becomes visible, and the player has at most five missed guesses.
+
+The player has more than five missed guesses.
+
+We start with import statements:
+
+import Data.Char (toUpper, toLower)
+import Data.List (sort)
+There is an alphabet for the game. The hidden phrase may only contain letters from the given alphabet.
+
+type ABC = [Char]
+
+abc :: ABC
+abc = ['A'..'Z']
+The state of the game (State) consists of the hidden phrase (Riddle), the correctly guessed letters (RightGuesses) and missed guesses (WrongGuesses).
+
+Note that all three components of a state may only contain letters. We enforce this invariant through correct function definitions.
+
+type Riddle       = String
+type RightGuesses = [Char]
+type WrongGuesses = [Char]
+type State        = (Riddle, RightGuesses, WrongGuesses)
+Valid letters (1 point)
+The guessed letters may as well be lower and upper case letters and other characters. Define the function that validates a letter, meaning that it is part of a given alphabet, regardless of case.
+
+isValidLetter :: Char -> ABC -> Bool
+Test cases:
+
+test_isValidLetter =
+  [ isValidLetter 'a' abc        == True
+  , isValidLetter 'X' abc        == True
+  , isValidLetter ' ' abc        == False
+  , isValidLetter '$' "*]-$><"   == True
+  , isValidLetter 'E' ['a'..'z'] == True
+  ]
+Initial state (2 points)
+Define the function which creates an initial state from a phrase. If the phrase consists of letters and spaces only then the function yields an initial state. Recall that a state has three components: the phrase, correct guesses and missed guesses. Evidently, the latter two are empty lists at the beginning.
+
+If the phrase has characters not being in the given alphabet then return undefined. Hints: use the toUpper and map functions.
+
+startState :: ABC -> String -> State
+Test cases:
+
+test_startState =
+  [ startState abc ""                == ("","","")
+  , startState abc "SOS"             == ("SOS","","")
+  , startState abc "Save Our Souls"  == ("SAVE OUR SOULS","","")
+  ]
+Guessing letters (2 points)
+Define the function which updates a state using a guessed letter.
+
+There are multiple ways to consider:
+
+If the guessed letter, regardless of case, is not part of the alphabet then return undefined.
+
+If the guessed letter has already occured before, meaning it is among guessed letters then do not update the state.
+
+If the guessed letter is a letter of the phrase then place it in the list of correct guesses.
+
+If the guessed letter is not a letter of the phrase then place it in the list of missed guesses.
+
+Hint: use the elem function.
+
+guessLetter :: ABC -> Char -> State -> State
+Test cases:
+
+test_guessLetter =
+  [ guessLetter abc 'a' (startState abc "Save Our Souls") == ("SAVE OUR SOULS","A","")
+  , guessLetter abc 'A' (startState abc "Save Our Souls") == ("SAVE OUR SOULS","A","")
+  , guessLetter abc 'k' (startState abc "Save Our Souls") == ("SAVE OUR SOULS","","K")
+  , guessLetter abc 'a' (guessLetter abc 'a' (startState abc "Save Our Souls")) == ("SAVE OUR SOULS","A","")
+  , guessLetter abc 'K' (guessLetter abc 'k' (startState abc "Save Our Souls")) == ("SAVE OUR SOULS","","K")
+  , guessLetter abc 'v' ("SAVE OUR SOULS", "A", [])       == ("SAVE OUR SOULS","VA","")
+  , guessLetter abc 'k' ("SAVE OUR SOULS", "VA", [])      == ("SAVE OUR SOULS","VA","K")
+  ]
+Displaying a phrase (2 points)
+Define the function which visualizes a phrase in its current state for the player.
+
+The correctly guessed letters and spaces of the phrase are visible and everything else is replaced by an underscore character.
+
+Note: showState is not allowed here.
+
+showRiddle :: State -> String
+Test cases:
+
+test_showRiddle =
+  [ showRiddle ("SAVE OUR SOULS", [], [])     == "____ ___ _____"
+  , showRiddle ("SAVE OUR SOULS", "AL", [])   == "_A__ ___ ___L_"
+  , showRiddle ("SAVE OUR SOULS", "SAL", [])  == "SA__ ___ S__LS"
+  , showRiddle ("SAVE OUR SOULS", "SALO", []) == "SA__ O__ SO_LS"
+  , showRiddle ("SOS", "SO", "AL")            == "SOS"
+  ]
+Displaying a state (1 point)
+Define the function which visualizes a state for the player.
+
+showState :: State -> State
+Test cases:
+
+test_showState =
+  [ showState ("SAVE OUR SOULS", [], [])     == ("____ ___ _____", "", "")
+  , showState ("SAVE OUR SOULS", "SAL", [])  == ("SA__ ___ S__LS", "SAL", "")
+  , showState ("SAVE OUR SOULS", "SALO", []) == ("SA__ O__ SO_LS", "SALO", "")
+  ]
+Is a riddle complete? (2 points)
+Define the function which examines whether the player has managed to figure out the phrase. This is the case when every letter of the prase is among the correct guesses.
+
+Note: We do not concern ourselves about the number of missed guesses here.
+
+isRiddleComplete :: State -> Bool
+test_isRiddleComplete =
+  [ isRiddleComplete ("SOS", [], [])                        == False
+  , isRiddleComplete ("SOS", "SALO", [])                    == True
+  , isRiddleComplete ("SOS", "ALO", [])                     == False
+  , isRiddleComplete ("SOS", [], "LKHJIG")                  == False
+  , isRiddleComplete ("SAVE OUR SOULS", "SAVEOURL", "KZTW") == True
+  ]
+Game over (1 point)
+Define the function which tests whether the game is over.
+
+Recall that the game ends if one of the following holds:
+
+The player figures out the phrase and makes at most five missed guesses.
+
+The player makes more than five missed guesses.
+
+isGameOver :: State -> Bool
+Test cases:
+
+test_isGameOver =
+  [ isGameOver ("SOS", [], [])                          == False
+  , isGameOver ("SOS", [], "LKHJIG")                    == True
+  , isGameOver ("SAVE OUR SOULS", "SAVEOURL", "KZTW")   == True
+  , isGameOver ("SAVE OUR SOULS", "SAVEOURL", "KZTWM")  == True
+  , isGameOver ("SAVE OUR SOULS", "SAVEOURL", "KZTWMB") == True
+  ]
+Unused letters (1 point)
+Define the function which produces all the unused letters of a given alphabet.
+
+getAvailableLetters :: ABC -> State -> [Char]
+Test cases:
+
+test_getAvailableLetters =
+  [ sort (getAvailableLetters abc ("SAVE OUR SOULS", "SAVEOURL", "KZTW")) == "BCDFGHIJMNPQXY"
+  , sort (getAvailableLetters abc ("SOS", [], "LKHJIG"))                  == "ABCDEFMNOPQRSTUVWXYZ"
+  , sort (getAvailableLetters abc ("SOS", [], []))                        == "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  ]
+You can start with the file below.
+
+import Data.Char (toUpper, toLower)
+import Data.List (sort)
+
+type ABC = [Char]
+
+abc :: ABC
+abc = ['A'..'Z']
+
+type Riddle       = String
+type RightGuesses = [Char]
+type WrongGuesses = [Char]
+type State        = (Riddle, RightGuesses, WrongGuesses)
+
+isValidLetter :: Char -> ABC -> Bool
+isValidLetter = undefined
+
+test_isValidLetter =
+  [ isValidLetter 'a' abc        == True
+  , isValidLetter 'X' abc        == True
+  , isValidLetter ' ' abc        == False
+  , isValidLetter '$' "*]-$><"   == True
+  , isValidLetter 'E' ['a'..'z'] == True
+  ]
+
+startState :: ABC -> String -> State
+startState = undefined
+
+test_startState =
+  [ startState abc ""                == ("","","")
+  , startState abc "SOS"             == ("SOS","","")
+  , startState abc "Save Our Souls"  == ("SAVE OUR SOULS","","")
+  ]
+
+guessLetter :: ABC -> Char -> State -> State
+guessLetter = undefined
+
+test_guessLetter =
+  [ guessLetter abc 'a' (startState abc "Save Our Souls") == ("SAVE OUR SOULS","A","")
+  , guessLetter abc 'A' (startState abc "Save Our Souls") == ("SAVE OUR SOULS","A","")
+  , guessLetter abc 'k' (startState abc "Save Our Souls") == ("SAVE OUR SOULS","","K")
+  , guessLetter abc 'a' (guessLetter abc 'a' (startState abc "Save Our Souls")) == ("SAVE OUR SOULS","A","")
+  , guessLetter abc 'K' (guessLetter abc 'k' (startState abc "Save Our Souls")) == ("SAVE OUR SOULS","","K")
+  , guessLetter abc 'v' ("SAVE OUR SOULS", "A", [])       == ("SAVE OUR SOULS","VA","")
+  , guessLetter abc 'k' ("SAVE OUR SOULS", "VA", [])      == ("SAVE OUR SOULS","VA","K")
+  ]
+
+showRiddle :: State -> String
+showRiddle = undefined
+
+test_showRiddle =
+  [ showRiddle ("SAVE OUR SOULS", [], [])     == "____ ___ _____"
+  , showRiddle ("SAVE OUR SOULS", "AL", [])   == "_A__ ___ ___L_"
+  , showRiddle ("SAVE OUR SOULS", "SAL", [])  == "SA__ ___ S__LS"
+  , showRiddle ("SAVE OUR SOULS", "SALO", []) == "SA__ O__ SO_LS"
+  , showRiddle ("SOS", "SO", "AL")            == "SOS"
+  ]
+
+showState :: State -> State
+showState = undefined
+
+test_showState =
+  [ showState ("SAVE OUR SOULS", [], [])     == ("____ ___ _____", "", "")
+  , showState ("SAVE OUR SOULS", "SAL", [])  == ("SA__ ___ S__LS", "SAL", "")
+  , showState ("SAVE OUR SOULS", "SALO", []) == ("SA__ O__ SO_LS", "SALO", "")
+  ]
+
+isRiddleComplete :: State -> Bool
+isRiddleComplete = undefined
+
+test_isRiddleComplete =
+  [ isRiddleComplete ("SOS", [], [])                        == False
+  , isRiddleComplete ("SOS", "SALO", [])                    == True
+  , isRiddleComplete ("SOS", "ALO", [])                     == False
+  , isRiddleComplete ("SOS", [], "LKHJIG")                  == False
+  , isRiddleComplete ("SAVE OUR SOULS", "SAVEOURL", "KZTW") == True
+  ]
+
+isGameOver :: State -> Bool
+isGameOver = undefined
+
+test_isGameOver =
+  [ isGameOver ("SOS", [], [])                          == False
+  , isGameOver ("SOS", [], "LKHJIG")                    == True
+  , isGameOver ("SAVE OUR SOULS", "SAVEOURL", "KZTW")   == True
+  , isGameOver ("SAVE OUR SOULS", "SAVEOURL", "KZTWM")  == True
+  , isGameOver ("SAVE OUR SOULS", "SAVEOURL", "KZTWMB") == True
+  ]
+
+getAvailableLetters :: ABC -> State -> [Char]
+getAvailableLetters = undefined
+
+test_getAvailableLetters =
+  [ sort (getAvailableLetters abc ("SAVE OUR SOULS", "SAVEOURL", "KZTW")) == "BCDFGHIJMNPQXY"
+  , sort (getAvailableLetters abc ("SOS", [], "LKHJIG"))                  == "ABCDEFMNOPQRSTUVWXYZ"
+  , sort (getAvailableLetters abc ("SOS", [], []))                        == "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  ]
+
+allTests = (and (concatMap snd tests), tests)
+
+tests =
+  [ ("test_isValidLetter", test_isValidLetter)
+  , ("test_startState", test_startState)
+  , ("test_guessLetter", test_guessLetter)
+  , ("test_showRiddle", test_showRiddle)
+  , ("test_showState", test_showState)
+  , ("test_isRiddleComplete", test_isRiddleComplete)
+  , ("test_isGameOver", test_isGameOver)
+  , ("test_getAvailableLetters", test_getAvailableLetters)
+  ]

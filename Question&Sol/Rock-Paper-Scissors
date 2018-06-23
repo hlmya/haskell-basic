@@ -1,0 +1,280 @@
+Recommended for use: the GHC documentation, and Hoogle (Haskell API search). Please note that there are tasks that may depend on others, so it is recommended to define the functions in the order of their introduction in the text below. Each function must have exactly the same name and type as it is given, otherwise the solution will not be accepted. Place all the function definitions in a single source file and submit the contents here, in BE-AD. In addition to that, it is highly recommended to use the same source file for the development.
+
+If you want to use the tests embedded into the description, add the following code snippet to the beginning of your source file:
+
+import Control.DeepSeq
+import Control.Exception
+import Data.Char
+import Data.Either
+import Data.Function
+import Data.List
+import System.IO.Unsafe
+
+raises :: NFData a => a -> String -> Bool
+x `raises` s = unsafePerformIO $
+  either ((s ~=) . f) (const False) `fmap` (try $ evaluate $ force x)
+  where
+    f :: SomeException -> String
+    f = show
+
+    (~=) = isPrefixOf `on` (map toUpper . unwords . words)
+
+allTests = (and (concatMap snd tests), tests)
+
+tests =
+  [ ("validSigns", test_validSigns)
+  , ("beats", test_beats)
+  , ("isDraw", test_isDraw)
+  , ("result", test_result)
+  , ("tournament", test_tournament)
+  , ("partitionRounds", test_partitionRounds)
+  , ("next", test_next)
+  , ("frequency", test_frequency)
+  , ("mostFrequent", test_mostFrequent)
+  , ("strategy1", test_strategy1)
+  , ("strategy2", test_strategy2)
+  , ("strategy3", test_strategy3)
+  , ("applyStrategies", test_applyStrategies)
+  , ("play", test_play)
+  ]
+Summary of the task (18 points)
+In this exam we will model the Rock-Paper-Scissors two-person game, we develop different strategires for playing the game and then compare these.
+
+The game goes as follows.
+
+The game consists of several rounds.
+
+In each round, each player chooses a sign which is either rock, paper or scissors and shows it at the same time to the other player.
+
+If the sign of a player beats the sign of the other, he/she wins that round.
+
+If both players show the same sign, the round is a draw.
+
+The player who wins more rounds wins the whole game.
+
+The beating order of the different signs:
+
+Rock beats scissors.
+
+Paper beats rock.
+
+Scissors beat paper.
+
+The signs will be represented by integer values for simplicity, rock, paper and scissors correspond to 0, 1 and 2, respectively.
+
+type Sign = Int
+Checking validity of signs (1 point)
+Write a function which applies the function given as its first parameter to the second and third parameter, but only in the case when the second and third parameters are valid signs. Otherwise use the error function to raise an error, as given in the examples.
+
+validSigns :: (Sign -> Sign -> a) -> Sign -> Sign -> a
+Test cases:
+
+test_validSigns =
+  [ validSigns (\x y -> x) 1 2                 == 1
+  , validSigns (\x y -> y) 1 2                 == 2
+  , validSigns (\x y -> (x,y)) 10 0 `raises` "validSigns: invalid values: (10,0)"
+  , validSigns (\x y -> (y,x)) 2 (-1) `raises` "validSigns: invalid values: (2,-1)"
+  ]
+Checking beating (1 point)
+Write a function which decides whether the sign given as a first argument beats the second. Please ensure that the function only accepts valid inputs (use the validSigns function).
+
+beats :: Sign -> Sign -> Bool
+Test cases:
+
+test_beats =
+  [ 0 `beats` 2 == True
+  , [(n, m, n `beats` m) | n <- [0,1,2], m <- [0,1,2]] == [(0,0,False),(0,1,False),(0,2,True),(1,0,True),(1,1,False),(1,2,False),(2,0,False),(2,1,True),(2,2,False)]
+  , 4 `beats` 0 `raises` "validSigns: invalid values: (4,0)"
+  , 1 `beats` 3 `raises` "validSigns: invalid values: (1,3)"
+  ]
+Checking draw (1 point)
+Write a function which decides if the signs given as an input represent a draw. Please ensure that the function only accepts valid inputs (use the validSigns function).
+
+isDraw :: Sign -> Sign -> Bool
+Test cases:
+
+test_isDraw =
+   [ isDraw 1 1 == True
+   , [(n,m ,isDraw n m) | n <- [0,1,2], m <- [0,1,2]] == [(0,0,True),(0,1,False),(0,2,False),(1,0,False),(1,1,True),(1,2,False),(2,0,False),(2,1,False),(2,2,True)]
+   , isDraw 4 5 `raises` "validSigns: invalid values: (4,5)"
+   ]
+Result of one round (1 point)
+Define the function which evaluates a round. The function should return 1, 0 and -1, corresponding to the first player (sign given as first argument) beats the second player, achieves a draw or is defeated.
+
+result :: Sign -> Sign -> Int
+Test cases:
+
+test_result =
+   [ result 0 1 == -1
+   , result 2 1 == 1
+   , [ result i j | i <- [0,1,2], j<- [0,1,2]] == [0,-1,1,1,0,-1,-1,1,0]
+   ]
+Result of one game (1 point)
+Each game consists of multiple rounds. We will remember the signs played by a player in the following list.
+
+type Play = [Sign]
+The list starts with the sign played in the very last round, then it continues with the sign played in the last but one round, and so on.
+
+One game is represented by a pair of the above lists.
+
+type Rounds = (Play, Play)
+The first component of the pair is the list of signs played by the first player, the second component is the list of signs played by the second player. 
+We can assume that whenever we have a value of type Rounds, the two lists have the same length.
+
+Write a function which summarizes a game and gives the result as follows.
+
+00 : the game is a draw (both players won the same number of rounds)
+
+11 : the first player won the game (the first player won more rounds than the second one)
+
+22 : the second player won the game
+
+tournament :: Rounds -> Int
+Test cases:
+
+test_tournament =
+   [ tournament ([1,2,0,1,2,0,1,1,0,1], [0,2,1,0,0,1,2,1,1,2]) == 2
+   , tournament ([0,2,1,0,0,1,2,1,1,2], [1,2,0,1,2,0,1,1,0,1]) == 1
+   , tournament ([0,2], [0,2]) == 0
+   , tournament ([], [])       == 0
+   ]
+Partitioning a game (2 points)
+Write a function which splits the results of a game into 3 partitions from the point of view of the first player: winning, draw and losing rounds. 
+The function should return the result as an ordered triple consisting of the following components:
+
+The first list has the signs played by the first player in the winning rounds
+
+The second list has the signs played by the first player in the rounds with a draw
+
+The third list has the signs played by the first player in the losing rounds
+
+partitionRounds :: Rounds -> ([Sign], [Sign], [Sign])
+Test cases:
+
+test_partitionRounds =
+   [ partitionRounds ([], []) == ([],[],[])
+   , partitionRounds ([1,2,0,1,2,0,1,1,0,1], [0,2,1,0,0,1,2,1,1,2]) == ([1,1],[2,1],[0,2,0,1,0,1])
+   , partitionRounds ([0,2,1,0,0,1,2,1,1,2], [1,2,0,1,2,0,1,1,0,1]) == ([1,0,1,2,1,2],[2,1],[0,0])
+   ]
+Computing successors (1 point)
+Write a function which computes the successor sign in terms of beating, 
+that is it computes the following map: (rock \to→ paper, paper \to→ scissors, scissors \to→ rock).
+
+next :: Sign -> Sign
+Test cases:
+
+test_next =
+   [ [ next i | i <- [0,1,2]] == [1,2,0]
+   ]
+Frequency of an element (1 point)
+Write a function which counts how many times an element appears in a list.
+
+frequency :: Eq a => a -> [a] -> Int
+Test cases:
+
+test_frequency =
+   [ frequency 1 [] == 0
+   , frequency 1 (take 30 $ cycle [1..5]) == 6
+   , frequency 5 (take 24 $ cycle [1..5]) == 4
+   ]
+Most frequent element (2 points)
+Write a function which produces the most frequent element in a list. If there is more than one such element, it should return the one with the highest value.
+
+mostFrequent :: Ord a => [a] {- non-empty -} -> a
+Test cases:
+
+test_mostFrequent =
+  [ mostFrequent [1,0,1,2,1,0,0,2,2,0]   == 0
+  , mostFrequent [1,0,1,2,1,0,0,2,2,0,2] == 2
+  , mostFrequent [2,1,0]                 == 2
+  ]
+Strategies
+The Strategy type synonym describes a function type. An operation of type Strategy receives the previous rounds in the game (what the first and second player did in each round, as given above in Rounds) and tries to determine the best winning strategy for the first player.
+
+type Strategy = Rounds -> Sign -- (Play, Play) -> Sign
+In the next three steps we will create three different strategies which try to calculate what sign should the first player play in order to win the game.
+
+First strategy (1 point)
+The first strategy works as follows (from the point of view of the first player).
+
+If we won in the last round playing sign a, we assume that our opponent will play the sign b that beats a, hence we play the sign that beats b.
+
+If we lost in the last round or had a draw, we will play the sign that beats what the opponent was playing in the last round.
+
+If there were no previous rounds, we return the sign rock.
+
+strategy1 :: Strategy
+Test cases:
+
+test_strategy1 =
+  [ strategy1 ([],[])        == 0
+  , strategy1 ([2],[1])      == 1
+  , strategy1 ([1],[2])      == 0
+  , strategy1 ([2,2],[1,0])  == 1
+  , strategy1 ([0,0], [2,2]) == 2
+  , strategy1 (take 20 (cycle [0,2,1]), take 20 (cycle [1,2,1])) == 2
+  ]
+Second strategy (1 point)
+The second strategy is based on what the opponent was playing. We check which was the most frequently played sign by the opponent, and we play the sign that beats it. If this is the first round, we play scissors.
+
+strategy2 :: Strategy
+Test cases:
+
+test_strategy2 =
+  [ strategy2 ([], [])               == 2
+  , strategy2 ([1], [2])             == 0
+  , strategy2 ([0], [2])             == 0
+  , strategy2 ([1,2,0,0], [2,1,2,1]) == 0
+  , strategy2 (take 20 (cycle [0,2,1]), take 20 (cycle [1,2,1])) == 2
+  ]
+Third strategy (3 points)
+The third strategy is based on our previous decisions.
+
+If this is the first round, we return paper.
+
+Otherwise, we split our previous steps into winning, draw and losing steps (use the function partitionRounds). Then we proceed as follows.
+
+If we won the same number of times as we lost, we select the most frequent sign from the rounds which were draw and we return the sign which beats this one.
+
+If there we won more rounds than lost, we return the most frequent sign that we played from the list of the winning rounds.
+
+In every other case we select the most frequent sign that we played in the losing rounds and select the sign which beats it.
+
+strategy3 :: Strategy
+Test cases:
+
+test_strategy3 =
+  [ strategy3 ([], [])           == 1
+  , strategy3 ([2], [0])         == 0
+  , strategy3 ([0], [2])         == 0
+  , strategy3 ([1,2,0], [1,2,0]) == 0
+  , strategy3 ([2,0,1], [1,2,0]) == 2
+  , strategy3 (take 20 (cycle [0,2,1]), take 20 (cycle [1,2,1])) == 1
+  ]
+Calculate next step (1 point)
+Write a function which plays a new round knowing the strategies of the two players and the results of the previous rounds. The first argument is the strategy of the first player and the second argument is the strategy of the second player.
+
+Note: don't forget that for determining the strategy of the second player, you need to swap the components in Rounds because the first pair should always correspond to the player from the viewpoint of which the next step is calculated.
+
+applyStrategies :: Strategy -> Strategy -> Rounds -> Rounds
+Test cases:
+
+test_applyStrategies =
+  [ applyStrategies strategy1 strategy2 ([], [])               == ([0],[2])
+  , applyStrategies strategy1 strategy2 ([0], [1])             == ([2,0],[1,1])
+  , applyStrategies strategy1 strategy2 ([2,0], [0,1])         == ([1,2,0],[0,0,1])
+  , applyStrategies strategy1 strategy2 ([2,0,1,0], [0,1,1,0]) == ([1,2,0,1,0],[1,0,1,1,0])
+  ]
+A game with n steps (1 point)
+Write a function, which produces a game with the given number of rounds. The first argument is the number of rounds. The second and third argument are the strategies for the first and second player, correspondingly.
+
+play :: Int -> Strategy -> Strategy -> Rounds
+Test cases:
+
+test_play =
+  [ play (-4) strategy1 strategy2            == ([],[])
+  , play 0 strategy1 strategy2               == ([],[])
+  , play 10 strategy1 strategy2              == ([0,2,1,0,2,1,0,1,2,0],[0,2,1,0,2,1,0,0,1,2])
+  , tournament (play 10 strategy2 strategy1) == 2
+  , [tournament $ play 10 s1 s2 | s1 <- [strategy1, strategy2, strategy3], s2 <- [strategy1, strategy2, strategy3]] == [0,1,2,2,0,1,1,2,0]
+  ]
